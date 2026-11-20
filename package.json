@@ -1,0 +1,21 @@
+{
+  "name": "agentleash",
+  "version": "1.0.0",
+  "description": "AgentLeash - on-chain spend limits for AI agents paying in tUSD8 on QDay Aevum Testnet",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "compile": "node scripts/compile.js",
+    "setup-agent": "node agent/setup.js",
+    "serve": "node scripts/serve.js",
+    "set-vault": "node scripts/set-vault.js",
+    "agent": "node agent/run.js"
+  },
+  "dependencies": {
+    "ethers": "6.13.4",
+    "solc": "0.8.24"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

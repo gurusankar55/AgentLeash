@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgentLeash - spend limits for AI agents paying in tUSD8</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="config.js"></script>
+  <script src="artifact.js"></script>
+  <script src="demo.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">⛓</span>
+      <div>
+        <h1>AgentLeash</h1>
+        <p class="tag">Let AI agents pay in tUSD8 - on a leash you control.</p>
+      </div>
+    </div>
+    <div class="wallet">
+      <span id="netBadge" class="badge">QDay Aevum Testnet</span>
+      <button id="connectBtn" class="primary">Connect wallet</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="toast" class="toast hidden"></div>
+
+    <section class="card intro">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li><b>Owner</b> deposits tUSD8 into the AgentLeash vault.</li>
+        <li><b>Owner</b> gives an agent a leash: max per payment, max per 24h, expiry, approved merchants.</li>
+        <li><b>Agent</b> pays invoices by itself. The contract blocks anything outside the leash.</li>
+        <li><b>Owner</b> can revoke the agent or pause the vault in one click. Every payment is on-chain.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="deployCard">
+      <h2>1. Deploy the vault</h2>
+      <p>No vault yet. Connect your wallet, then deploy (one signature).</p>
+      <button id="deployBtn" class="primary">Deploy AgentLeash</button>
+      <div id="deployOut" class="out"></div>
+    </section>
+
+    <section class="card">
+      <h2>Vault</h2>
+      <div class="grid">
+        <div><label>Vault address</label><div id="vaultAddr" class="mono">-</div></div>
+        <div><label>Owner</label><div id="vaultOwner" class="mono">-</div></div>
+        <div><label>Vault balance</label><div id="vaultBal" class="big">-</div></div>
+        <div><label>Status</label><div id="vaultStatus">-</div></div>
+        <div><label>Your tUSD8</label><div id="myToken">-</div></div>
+        <div><label>Your gas</label><div id="myGas">-</div></div>
+      </div>
+      <button id="refreshBtn">Refresh</button>
+    </section>
+
+    <section class="card owner-only" id="setupCard">
+      <h2>2. Put an agent on a leash</h2>
+      <p class="muted">Runs everything for you: approve, deposit, set leash + merchants, and send the agent a little gas. Sign each wallet pop-up.</p>
+      <div class="form">
+        <label>Agent address <input id="fAgent" placeholder="0x..." /></label>
+        <label>Approved merchants (one per line) <textarea id="fMerchants" rows="2" placeholder="0x..."></textarea></label>
+        <div class="row">
+          <label>Max per payment (tUSD8) <input id="fPerTx" value="0.20" /></label>
+          <label>Max per 24h (tUSD8) <input id="fDaily" value="0.50" /></label>
+          <label>Expires in (hours) <input id="fHours" value="72" /></label>
+        </div>
+        <div class="row">
+          <label>Deposit into vault (tUSD8) <input id="fDeposit" value="0.60" /></label>
+          <label>Gas for agent (tQDAY) <input id="fGas" value="0.5" /></label>
+        </div>
+      </div>
+      <button id="setupBtn" class="primary">Run demo setup</button>
+      <ul id="setupLog" class="log"></ul>
+    </section>
+
+    <section class="card owner-only">
+      <h2>3. Owner controls</h2>
+      <div class="row buttons">
+        <button id="revokeBtn" class="danger">Revoke agent</button>
+        <button id="pauseBtn" class="warn">Pause vault</button>
+        <button id="withdrawBtn">Withdraw all to me</button>
+      </div>
+      <p class="muted">Revoke and pause take effect on the very next agent payment.</p>
+    </section>
+
+    <section class="card">
+      <h2>Agent status</h2>
+      <label>Agent address <input id="agentInput" placeholder="0x..." /></label>
+      <button id="agentBtn">Check agent</button>
+      <div class="grid" id="agentGrid">
+        <div><label>Leash</label><div id="aActive">-</div></div>
+        <div><label>Per payment cap</label><div id="aPerTx">-</div></div>
+        <div><label>24h cap</label><div id="aDaily">-</div></div>
+        <div><label>Spent in window</label><div id="aSpent">-</div></div>
+        <div><label>Left today</label><div id="aLeft">-</div></div>
+        <div><label>Expires</label><div id="aExp">-</div></div>
+        <div><label>Payments made</label><div id="aCount">-</div></div>
+        <div><label>Total spent</label><div id="aTotal">-</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Try a payment (dry run, no wallet needed)</h2>
+      <p class="muted">Asks the contract's canPay() whether the agent would be allowed to pay.</p>
+      <div class="form">
+        <label>Merchant <input id="tMerchant" placeholder="0x..." /></label>
+        <div class="row">
+          <label>Amount (tUSD8) <input id="tAmount" value="0.10" /></label>
+          <label>Invoice id <input id="tInvoice" value="TEST-1" /></label>
+        </div>
+      </div>
+      <button id="tryBtn">Check</button>
+      <div id="tryOut" class="out"></div>
+    </section>
+
+    <section class="card">
+      <h2>On-chain activity</h2>
+      <p class="muted">Every action, straight from the vault's event log. Click to open in the explorer.</p>
+      <ul id="activity" class="activity"><li class="muted">Loading...</li></ul>
+    </section>
+  </main>
+
+  <footer>
+    AgentLeash · built for Aevum Builder Challenge #1 · QDay Aevum Testnet (chain 44005) · test tokens only · MIT
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+node_modules/
+# The agent's private key must never be published
+agent/agent-key.json
+.env
