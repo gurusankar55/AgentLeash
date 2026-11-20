@@ -276,18 +276,9 @@ async function loadAgent() {
 async function loadActivity() {
   const list = $("activity");
   try {
-    const p = reader();
-    const latest = await p.getBlockNumber();
-    let from = deployBlock() || Math.max(0, latest - 20000);
-    if (latest - from > 200000) from = latest - 200000; // keep it fast
-    const STEP = 5000;
-    let logs = [];
-    for (let start = from; start <= latest; start += STEP) {
-      const end = Math.min(latest, start + STEP - 1);
-      const part = await p.getLogs({ address: vaultAddr, fromBlock: start, toBlock: end });
-      logs = logs.concat(part);
-    }
+    const logs = await fetchLogs();
     if (!logs.length) { list.innerHTML = '<li class="muted">No activity yet.</li>'; return; }
+    logs.sort((x, y) => x.blockNumber - y.blockNumber || x.index - y.index);
     const rows = [];
     for (const lg of logs.reverse()) {
       let ev;
@@ -309,6 +300,42 @@ async function loadActivity() {
   } catch (e) {
     list.innerHTML = '<li class="muted">Could not load activity. Connect your wallet and press Refresh.</li>';
   }
+}
+
+// Logs come from the block explorer API first (no block-range limit),
+// then fall back to the RPC in 1000-block chunks (the RPC's max range).
+async function fetchLogs() {
+  const from = deployBlock();
+  try {
+    const url = `${C.explorer}/api?module=logs&action=getLogs&address=${vaultAddr}&fromBlock=${from}&toBlock=latest`;
+    const r = await fetch(url);
+    const j = await r.json();
+    if (Array.isArray(j.result)) {
+      return j.result.map((l) => ({
+        topics: (l.topics || []).filter((t) => t),
+        data: l.data,
+        blockNumber: parseInt(l.blockNumber, 16),
+        index: parseInt(l.logIndex || "0x0", 16) || 0,
+        transactionHash: l.transactionHash,
+      }));
+    }
+  } catch (_) { /* fall back to RPC */ }
+
+  const p = reader();
+  const latest = await p.getBlockNumber();
+  const STEP = 1000;
+  let start = from || Math.max(0, latest - 20 * STEP);
+  if (latest - start > 60 * STEP) start = latest - 60 * STEP; // keep the fallback fast
+  const ranges = [];
+  for (let s = start; s <= latest; s += STEP) ranges.push([s, Math.min(latest, s + STEP - 1)]);
+  const out = [];
+  for (let i = 0; i < ranges.length; i += 6) {
+    const parts = await Promise.all(
+      ranges.slice(i, i + 6).map(([a, b]) => p.getLogs({ address: vaultAddr, fromBlock: a, toBlock: b }))
+    );
+    for (const part of parts) for (const l of part) out.push({ topics: l.topics, data: l.data, blockNumber: l.blockNumber, index: l.index, transactionHash: l.transactionHash });
+  }
+  return out;
 }
 
 // ---------- actions ----------
